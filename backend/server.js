@@ -17,18 +17,37 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// MongoDB connection
-if (!process.env.MONGODB_URI) {
+// Check MongoDB connection string format
+const mongoURI = process.env.MONGODB_URI?.trim();
+
+if (!mongoURI) {
   console.error('MONGODB_URI is missing in environment variables');
 } else {
-  mongoose
-    .connect(process.env.MONGODB_URI)
-    .then(() => {
-      console.log('MongoDB connected successfully');
-    })
-    .catch((err) => {
-      console.error('MongoDB connection error:', err.message);
-    });
+  console.log(
+    'MongoDB URI scheme:',
+    mongoURI.split(':')[0]
+  );
+
+  if (
+    !mongoURI.startsWith('mongodb://') &&
+    !mongoURI.startsWith('mongodb+srv://')
+  ) {
+    console.error(
+      'Invalid MongoDB URI. Check Render Environment settings.'
+    );
+  } else {
+    mongoose
+      .connect(mongoURI)
+      .then(() => {
+        console.log('MongoDB connected successfully');
+      })
+      .catch((err) => {
+        console.error(
+          'MongoDB connection error:',
+          err.message
+        );
+      });
+  }
 }
 
 // Routes
@@ -48,3 +67,4 @@ app.get('/api/health', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
