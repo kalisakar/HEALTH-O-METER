@@ -40,7 +40,7 @@ The original Express.js server was having issues with port conflicts and connect
 5. **Verify the Server**:
    Open your browser and navigate to:
    ```
-   http://localhost:5050/health
+
    ```
    You should see a JSON response: `{"message":"Gemini AI Flask Server is running","status":"ok"}`
 
