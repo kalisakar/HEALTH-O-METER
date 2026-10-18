@@ -3,6 +3,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { GoogleGenAI } from '@google/genai';
 
 import authRoutes from './routes/auth.js';
 import foodLogRoutes from './routes/foodLogs.js';
@@ -48,13 +49,14 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
     message: 'Health-o-Meter Backend is running',
-    database: mongoose.connection.readyState === 1
-      ? 'connected'
-      : 'disconnected'
+    database:
+      mongoose.connection.readyState === 1
+        ? 'connected'
+        : 'disconnected'
   });
 });
 
-// AI route reachability check only
+// AI route reachability check
 app.get('/api/ai/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -63,8 +65,56 @@ app.get('/api/ai/health', (req, res) => {
   });
 });
 
+// AI health advice
+app.post('/api/ai/health-advice', async (req, res) => {
+  try {
+    const { query } = req.body;
+
+    if (typeof query !== 'string' || !query.trim()) {
+      return res.status(400).json({
+        error: 'Please provide a health question.'
+      });
+    }
+
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(503).json({
+        error: 'AI service is not configured on the server.'
+      });
+    }
+
+    const ai = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY
+    });
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `Give safe, general health and wellness information.
+Do not diagnose illnesses or prescribe medicines.
+Do not prescribe medicines.
+Encourage professional medical care for concerning symptoms.
+
+User question: ${query.trim()}`
+    });
+
+    const answer = response.text;
+
+    if (!answer) {
+      return res.status(502).json({
+        error: 'The AI returned an empty response.'
+      });
+    }
+
+    return res.json({ text: answer });
+  } catch (error) {
+    console.error('AI generation failed:', error.message);
+
+    return res.status(502).json({
+      error: 'AI response could not be generated. Please try again.'
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
